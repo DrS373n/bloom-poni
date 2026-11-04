@@ -1,15 +1,34 @@
-# bloom-poni
-I built the combined repo at /root/bloom-poni, but I couldn't push it. Creating DrS373n/bloom-poni failed with "Resource not accessible by integration", so this session isn't authorized to create repos. To publish it, create the empty repo yourself, then run:
+# Bloom + Oyenza Studio
 
-Code
-cd /root/bloom-poni && git remote add origin <url> && git push -u origin main
-What's in it (one commit):
+A Windows desktop app combining Bloom's taskbar-replacement dock with Oyenza
+Studio's Poni island. Bloom's hidden main window remains as the dock's
+background bootstrap; the visible island is provided by Poni.
 
-Layout: bloom/ and oyenza-studio/ (which contains Poni) sit side by side. I didn't carry over either repo's git history.
-Island removed: I deleted Bloom's island UI (App.tsx, CompactMediaPlayer.tsx). The frontend builds cleanly with vite build, and tsc reports no errors.
-Dock kept: the dock, settings and overlay are untouched.
-Poni added: a new bloom/src-tauri/src/poni.rs starts poni.exe when Bloom launches and stops it on exit. tauri.conf.json bundles oyenza-studio/target/release/poni.exe, and the root README.md has the build steps.
-Not verified:
+## Build on Windows
 
-Rust and Windows: I haven't compiled the Rust or tested anything on Windows, since this environment isn't Windows. Build Poni with cargo build --release -p poni first so the bundle step finds poni.exe.
-Hidden "main" window: Bloom's Rust backend still manages its old "main" window in many places, so I kept it as an empty hidden window rather than ripping those references out.
+Use Windows 10/11 with the Rust MSVC toolchain, Visual Studio C++ build tools,
+Bun 1.4.0, and the WebView2 runtime.
+
+```powershell
+cd oyenza-studio
+cargo build --locked --release --package poni --target x86_64-pc-windows-msvc
+
+cd ../bloom
+bun install --frozen-lockfile
+bun run tauri build --bundles nsis
+```
+
+The NSIS installer is written under
+`bloom/src-tauri/target/release/bundle/nsis/`. It includes `poni.exe`, so a
+separate Oyenza installation is not needed.
+
+## Releases
+
+The root GitHub Actions release workflow builds Poni, bundles it with Bloom,
+and publishes the Windows NSIS `.exe` installer when a `v*` tag is pushed.
+Before tagging, commit the app changes and configure the repository secrets
+`TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PASSWORD` to match the updater
+public key in `bloom/src-tauri/tauri.conf.json`.
+
+From `bloom/`, run `bun run release <major.minor.patch>` on `main` to bump the
+Bloom version, create and push its release tag, and start the workflow.
